@@ -37,7 +37,7 @@ for(let day = startDay; day <= endDay; day++) {
         continue;
     }
     const solver = require(path +`/solve`);
-    const input = fs.readFileSync(path + `/input.txt`)
+    const input = fs.readFileSync(path + `/input`)
                     .toString()
                     .split('\n')
                     .map(s => s.replace(/\r$/, ''))
