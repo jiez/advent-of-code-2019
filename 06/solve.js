@@ -37,11 +37,37 @@ function solve(input, part) {
             indirect_orbits += layers.get(object) - 1;
         }
 
-    console.log(`direct: ${direct_orbits} indirect: ${indirect_orbits}`);
-    return direct_orbits + indirect_orbits;
+    let total_orbits = direct_orbits + indirect_orbits;
+    console.log(`direct: ${direct_orbits} indirect: ${indirect_orbits} total: ${total_orbits}`);
+
+    if (part === 1)
+        return total_orbits;
+
+    let obj;
+    let sans_obitting_objects = new Set();
+
+    obj = 'SAN';
+    do {
+        obj = orbits.get(obj);
+        sans_obitting_objects.add(obj);
+    } while (obj !== 'COM');
+
+    // find the first object both 'YOU' and 'SAN' are orbitting
+    obj = 'YOU';
+    do {
+        obj = orbits.get(obj);
+        if (sans_obitting_objects.has(obj))
+            break;
+    } while (obj !== 'COM');
+
+    let transfers = layers.get('SAN') + layers.get('YOU') - layers.get(obj) * 2 - 2;
+
+    console.log(`first common object: ${obj} transfers: ${transfers}`);
+
+    return transfers;
 }
 
 
-const expected = part => part === 1 ? 0 : 0;
+const expected = part => part === 1 ? 140608 : 337;
 
 module.exports = {solve,expected};
