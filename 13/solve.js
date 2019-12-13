@@ -182,7 +182,13 @@ const TILE_BLOCK   = 2;
 const TILE_HPADDLE = 3;
 const TILE_BALL    = 4;
 
-function show_screen(screen)
+/* Before using this function to create an animation, run this command
+
+        setterm -cursor off
+
+   to hide cursor.  */
+
+function show_screen(screen, score, final_score)
 {
     let max_x = screen.length;
 
@@ -191,7 +197,7 @@ function show_screen(screen)
         if (max_y < screen[i].length)
             max_y = screen[i].length;
 
-    process.stdout.write("Screen\n");
+    process.stdout.write("Score: " + score + "\n");
 
     for (j = 0; j < max_y; j++) {
         for (i = 0; i < max_x; i++) {
@@ -222,7 +228,9 @@ function show_screen(screen)
         process.stdout.write("\n");
     }
 
-    process.stdout.write("\n");
+    if (!final_score)
+        for (j = 0; j < max_y + 1; j++)
+            process.stdout.write("\033[F");
 }
 
 function init_screen(program) {
@@ -284,8 +292,6 @@ function solve(input, part) {
     let width = right_wall - left_wall - 1;
     let height = hpad.y - 1;
 
-    //show_screen(screen);
-
     if (part === 1)
         return block_count;
 
@@ -296,6 +302,7 @@ function solve(input, part) {
     let output;
     let move;
     let target_x; // the target ball x value
+    let score = 0;
     let final_score = false;
     while (!final_score) {
         // initially we just keep still and observe the direction of ball
@@ -359,7 +366,7 @@ function solve(input, part) {
 
         screen["target_x"] = target_x;
         screen["target_y"] = hpad.y;
-        //show_screen(screen);
+        //show_screen(screen, score, final_score);
     }
 
     return score;
