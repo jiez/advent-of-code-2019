@@ -260,6 +260,7 @@ function show_map_with_flood(map, flood_map)
 
      "size": size of map {width, height},
      "droid": current location of Droid {x, y},
+     "oxygen": location of Oxygen {x, y},
 
    map[x][y]: x is west-east, 0 is west; y is north-south, 0 is north.  */
 
@@ -309,6 +310,7 @@ function explore(map, program, back_dir) {
             } else if (output[0] === OUTPUT_OXYGEN) {
                 //console.log("    Output: " + output[0] + "(OXYGEN)");
                 map[next_x][next_y] = MAP_OXYGEN;
+                map["oxygen"] = {"x": next_x, "y": next_y};
 
                 map["droid"]["x"] = next_x;
                 map["droid"]["y"] = next_y;
@@ -357,18 +359,13 @@ function explore(map, program, back_dir) {
     return;
 }
 
-function find_the_fewest_moves_to_oxygen(map, init_loc) {
+function flood(map, flood_map, init_loc) {
     let moves = 0;
     let edge = new Set();
-    let found = false;
-
-    let flood_map = [];
-    for (let i = 0; i < map.length; i++)
-        flood_map[i] = [];
 
     edge.add(JSON.stringify(init_loc));
 
-    while (edge.size > 0 && !found) {
+    while (edge.size > 0) {
         let new_edge = new Set();
         edge.forEach(function (key, value, set) {
             let loc = JSON.parse(value);
@@ -391,11 +388,9 @@ function find_the_fewest_moves_to_oxygen(map, init_loc) {
                 if (flood_map[next_x][next_y] !== undefined)
                     continue;
 
-                if (map[next_x][next_y] === MAP_EXPLORED)
+                if (map[next_x][next_y] === MAP_EXPLORED
+                    || map[next_x][next_y] === MAP_OXYGEN)
                     new_edge.add(JSON.stringify({"x": next_x, "y": next_y}));
-
-                if (map[next_x][next_y] === MAP_OXYGEN)
-                    found = true;
             }
         });
         moves++;
@@ -403,16 +398,10 @@ function find_the_fewest_moves_to_oxygen(map, init_loc) {
         //show_map_with_flood(map, flood_map);
     }
 
-    if (!found)        
-        return undefined;
-    else
-        return moves;
+    return moves - 1;
 }
 
 function solve(input, part) {
-    if (part === 2)
-        return 0;
-
     let program = input[0].split(',').map(x => Number(x));
     program["pc"] = 0;
     program["relative_base"] = 0;
@@ -436,15 +425,33 @@ function solve(input, part) {
     explore(map, program, undefined);
 
     //show_map(map);
+    if (map["oxygen"] === undefined) {
+        console.log("Oxygen system not found!!!");
+        return;
+    }
 
-    let moves = find_the_fewest_moves_to_oxygen(map, {"x": init_x, "y": init_y});
+    let oxygen_x = map["oxygen"]["x"];
+    let oxygen_y = map["oxygen"]["y"];
 
-    if (moves === undefined)
-        console.log("Oxygen system not found!");
-    else
-        console.log(`Fewest number of movement is ${moves}`);
+    let flood_map = [];
+    for (let i = 0; i < map.length; i++)
+        flood_map[i] = [];
+
+    flood(map, flood_map, {"x": init_x, "y": init_y});
+
+    if (part === 1)
+        return flood_map[oxygen_x][oxygen_y];
+
+    let flood_map2 = [];
+    for (let i = 0; i < map.length; i++)
+        flood_map2[i] = [];
+
+    let minutes = flood(map, flood_map2, {"x": oxygen_x, "y": oxygen_y});
+
+    //show_map_with_flood(map, flood_map2);
+    return minutes;
 }
 
-const expected = part => part === 1 ? 304: 0;
+const expected = part => part === 1 ? 304: 310;
 
 module.exports = {solve,expected};
