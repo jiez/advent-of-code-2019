@@ -183,12 +183,126 @@ function show_map(map)
     }
 }
 
-const SCAFFOLD  = 35;   // #
-const EMPTY     = 46;   // .
-const UP        = 94;   // ^
-const DOWN      = 118;  // v
-const LEFT      = 60;   // <
-const RIGHT     = 62;   // >
+const NEWLINE       = 10
+const SCAFFOLD      = 35;   // #
+const EMPTY         = 46;   // .
+const NORTH         = 94;   // ^
+const SOUTH         = 118;  // v
+const WEST          = 60;   // <
+const EAST          = 62;   // >
+
+const AHEAD         = 0;
+const LEFT          = 76;   // L
+const RIGHT         = 82;   // R
+
+function look(map, pos, dir, toward) {
+    let width = map[0].length;
+    let height = map.length;
+    let x = pos["x"];
+    let y = pos["y"];
+
+    if (dir === NORTH) {
+        if (toward === AHEAD && x > 0)
+            return map[x - 1][y];
+        else if (toward === LEFT && y > 0)
+            return map[x][y - 1];
+        else if (toward === RIGHT && y < height - 1)
+            return map[x][y + 1];
+    } else if (dir === SOUTH) {
+        if (toward === AHEAD && x < width - 1)
+            return map[x + 1][y];
+        else if (toward === LEFT && y < height - 1)
+            return map[x][y + 1];
+        else if (toward === RIGHT && y > 0)
+            return map[x][y - 1];
+    } else if (dir === EAST) {
+        if (toward === AHEAD && y < height - 1)
+            return map[x][y + 1];
+        else if (toward === LEFT && x > 0)
+            return map[x - 1][y];
+        else if (toward === RIGHT && x < width - 1)
+            return map[x + 1][y];
+    } else if (dir === WEST) {
+        if (toward === AHEAD && y > 0)
+            return map[x][y - 1];
+        else if (toward === LEFT && x < width - 1)
+            return map[x + 1][y];
+        else if (toward === RIGHT && x > 0)
+            return map[x - 1][y];
+    }
+
+    return undefined;
+}
+
+function move_ahead(dir, pos) {
+    let x = pos["x"];
+    let y = pos["y"];
+
+    if (dir === NORTH)
+        return {"x": x - 1, "y": y};
+    else if (dir === SOUTH)
+        return {"x": x + 1, "y": y};
+    else if (dir === EAST)
+        return {"x": x, "y": y + 1};
+    else if (dir === WEST)
+        return {"x": x, "y": y - 1};
+    else
+        return undefined;
+}
+
+function turn(dir, toward) {
+    if (dir === NORTH) {
+        if (toward === LEFT)
+            return WEST;
+        else if (toward === RIGHT)
+            return EAST;
+    } else if (dir === SOUTH) {
+        if (toward === LEFT)
+            return EAST;
+        else if (toward === RIGHT)
+            return WEST;
+    } else if (dir === EAST) {
+        if (toward === LEFT)
+            return NORTH;
+        else if (toward === RIGHT)
+            return SOUTH;
+    } else if (dir === WEST) {
+        if (toward === LEFT)
+            return SOUTH;
+        else if (toward === RIGHT)
+            return NORTH;
+    }
+
+    return undefined;
+}
+
+const A = 0;
+const B = 1;
+const C = 2;
+const MEM_LIMIT = 20 / 2;
+
+function match(movements, start, funcs, last_func, output = undefined) {
+    let found = true;
+
+    while (found) {
+        for (let f = 0; f <= last_func; f++) {
+            found = true;
+            for (let i = 0; i < funcs[f]["length"]; i++)
+                if (movements[start + i] !== movements[funcs[f]["start"] + i]) {
+                    found = false;
+                    break;
+                }
+            if (found) {
+                start += funcs[f]["length"];
+                if (output !== undefined)
+                    output.push(f);
+                break;
+            }
+        }
+    }
+
+    return start;
+}
 
 function solve(input, part) {
     let program = input[0].split(',').map(x => Number(x));
@@ -202,7 +316,7 @@ function solve(input, part) {
         if (output.length === 0)
             break;
 
-        if (output[0] === 10 /* new line */) {
+        if (output[0] === NEWLINE) {
             map.push([]);
             line++;
         } else
@@ -224,8 +338,245 @@ function solve(input, part) {
         console.log(`Sum of alignment: ${sum}`);
         return sum;
     }
+
+    /* Find the movements
+
+       By looking at the map with our human eyes, we find if robot do as below:
+
+         * if there is scaffold ahead,  it always goes straight
+         * otherwise it turns to left or right if that direction is scaffold
+         * when no scaffold ahead, left, or right, it reaches the end
+
+       it can visit all scaffolds.
+     */
+
+    /* locate the robot */
+
+    let pos = {"x": undefined, "y": undefined}; // current location of robot
+    let dir; // current direction of robot
+    for (i = 0; i < map.length; i++)
+        for (j = 0; j < map[i].length; j++)
+            if (map[i][j] === NORTH
+                || map[i][j] === SOUTH
+                || map[i][j] === WEST
+                || map[i][j] === EAST) {
+                pos["x"] = i;
+                pos["y"] = j;
+                dir = map[i][j];
+            }
+
+    let movements = [];
+    let straight_steps = 0;
+    while (true) {
+        if (look(map, pos, dir, AHEAD) === SCAFFOLD) {
+            straight_steps++;
+            pos = move_ahead(dir, pos);
+            continue;
+        } else if (straight_steps > 0) {
+            movements.push(straight_steps);
+            //process.stdout.write(straight_steps + ",");
+            straight_steps = 0;
+        }
+            
+        if (look(map, pos, dir, LEFT) === SCAFFOLD) {
+            dir = turn(dir, LEFT); 
+            movements.push(LEFT);
+            //process.stdout.write("L,");
+        } else if (look(map, pos, dir, RIGHT) === SCAFFOLD) {
+            dir = turn(dir, RIGHT); 
+            movements.push(RIGHT);
+            //process.stdout.write("R,");
+        } else {
+            //process.stdout.write("\n");
+            break;
+        }
+    }
+
+    let funcs = [{"start": 0, "length": 1},
+                 {"start": 0, "length": 0},
+                 {"start": 0, "length": 0}];
+    let next = 0;
+    let found = false;
+
+    /* find A, B, C which can cover movements */
+outer:
+    while (funcs[A]["start"] + funcs[A]["length"] <= movements.length
+           && funcs[A]["length"] <= MEM_LIMIT) {
+        next += funcs[A]["length"];
+        /* match A until cannot */
+        //console.log("New A");
+        //console.log(funcs);
+        //console.log("try from " + next);
+        next = match(movements, next, funcs, A);
+        //console.log("  matched A until " + next);
+
+        if (next === movements.length) {
+            found = true;
+            break outer;
+        }
+
+        /* set initial B */
+        funcs[B]["start"] = next;
+        funcs[B]["length"] = 1;
+    
+        while (funcs[B]["start"] + funcs[B]["length"] <= movements.length
+               && funcs[B]["length"] <= MEM_LIMIT) {
+            next += funcs[B]["length"];
+            /* match A or B until cannot */
+            //console.log("New B");
+            //console.log(funcs);
+            //console.log("try from " + next);
+            next = match(movements, next, funcs, B);
+            //console.log("  matched A or B until " + next);
+
+            if (next === movements.length) {
+                found = true;
+                break outer;
+            }
+
+            /* set initial C */
+            funcs[C]["start"] = next;
+            funcs[C]["length"] = 1;
+
+            while (funcs[C]["start"] + funcs[C]["length"] <= movements.length
+                   && funcs[C]["length"] <= MEM_LIMIT) {
+                next += funcs[C]["length"];
+                /* match A or B or C until cannot */
+                //console.log("New C");
+                //console.log(funcs);
+                //console.log("try from " + next);
+                next = match(movements, next, funcs, C);
+                //console.log("  matched A or B or C until " + next);
+
+                if (next === movements.length) {
+                    found = true;
+                    break outer;
+                }
+
+                funcs[C]["length"]++;
+                next = funcs[C]["start"];
+            }
+
+            funcs[B]["length"]++;
+            next = funcs[B]["start"];
+        }
+
+        funcs[A]["length"]++;
+        next = funcs[A]["start"];
+    }
+
+    if (!found) {
+        console.log("Not found!");
+        return undefined;
+    }
+
+    let main_routine = [];
+    match(movements, 0, funcs, C, main_routine);
+
+    /* create input */
+    let ascii_input = [];
+
+    for (let i = 0; i < main_routine.length; i++) {
+        ascii_input.push(65 /* A */ + main_routine[i]);
+        if (i === main_routine.length - 1)
+            ascii_input.push(10); /* new line */
+        else
+            ascii_input.push(44); /* , */
+    }
+
+    for (let f = 0; f < funcs.length; f++) {
+        let start = funcs[f]["start"];
+        let length = funcs[f]["length"];
+        for (let i = 0; i < length; i++) {
+            if (i % 2 === 0)
+                /* L or R */
+                ascii_input.push(movements[start + i]);
+            else {
+                /* steps */
+                let steps_digits = movements[start + i].toString().split('').map(Number);
+                for (j = 0; j < steps_digits.length; j++)
+                    ascii_input.push(48 /* 0 */ + steps_digits[j]);
+            }
+            if (i === length - 1)
+                ascii_input.push(10); // new line
+            else
+                ascii_input.push(44); // ,
+        }
+    }
+
+
+    program = input[0].split(',').map(x => Number(x));
+    program["pc"] = 0;
+    program["relative_base"] = 0;
+    /* wake up robot */
+    program[0] = 2;
+
+    let output_buffer = [];
+    let ascii_index = 0;
+    let output = 0;
+    let input_rules = false;
+    let asking_feed = false;
+    /* wait for a very large number */
+    while (output[0] === undefined || output[0] < 1000) {
+        if (!input_rules && !asking_feed)
+            output = run(program, []);
+        else if (asking_feed) {
+            output = run(program, [110, 10]); // n
+            input_feed = false;
+        } else {
+            //console.log("[in]" + ascii_input[ascii_index]);
+            output = run(program, [ascii_input[ascii_index]]);
+            if (ascii_input[ascii_index] === 10)
+                input_rules = false;
+            ascii_index++;
+        }
+
+        if (output.length === 0)
+            continue;
+
+        output_buffer.push(output[0])
+
+        //console.log("[out]" + output[0], String.fromCharCode(output[0]));
+
+        if (output[0] === 10) {
+            let last_output = output_buffer.slice(-6);
+            //console.log(last_output);
+
+            /* FIXME why this does not work???
+            if (last_output.map(String.fromCharCode).join('').indexOf("Main:") >= 0)
+            */
+            if (last_output[0] === 77           // M
+                && last_output[1] === 97        // a
+                && last_output[2] === 105       // i
+                && last_output[3] === 110       // n
+                && last_output[4] === 58        // :
+                && last_output[5] === 10)       // new line
+                input_rules = true;
+
+            if (last_output[0] === 111          // o
+                && last_output[1] === 110       // n 
+                && last_output[2] === 32        // ' ' 
+                && (last_output[3] === 65       // A
+                    || last_output[3] === 66    // B
+                    || last_output[3] === 67)   // C
+                && last_output[4] === 58        // :
+                && last_output[5] === 10)       // new line
+                input_rules = true;
+
+            if (last_output[0] === 102          // f
+                && last_output[1] === 101       // e
+                && last_output[2] === 101       // e
+                && last_output[3] === 100       // d
+                && last_output[4] === 63        // ?
+                && last_output[5] === 10)       // new line
+                asking_feed = true;
+        }
+            
+    }
+
+    return output[0];
 }
 
-const expected = part => part === 1 ? 9876: 0;
+const expected = part => part === 1 ? 9876: 1234055;
 
 module.exports = {solve,expected};
