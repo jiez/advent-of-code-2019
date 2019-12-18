@@ -37,14 +37,14 @@ function find_all_accessible_keys(map, start_loc) {
 
     let s = 0; // steps
     let edge = new Set();
-    edge.add(JSON.stringify(start_loc));
+    edge.add(start_loc.x + start_loc.y * 100);
 
     let keys = [];
 
     while (edge.size > 0) {
         let new_edge = new Set();
         edge.forEach(function (dummy, value, set) {
-            let loc = JSON.parse(value);
+            let loc = {x: value % 100, y: Math.floor(value / 100)};
             let i = loc.x;
             let j = loc.y;
             flood_map[i][j] = s;
@@ -68,7 +68,7 @@ function find_all_accessible_keys(map, start_loc) {
                         continue;
 
                     if (is_open(map[next_i][next_j]) || is_key(map[next_i][next_j]))
-                        new_edge.add(JSON.stringify({x: next_i, y: next_j}));
+                        new_edge.add(next_i + next_j * 100);
                 }
             }
         });
@@ -95,8 +95,8 @@ function find_fewest_steps(map, start_loc, depth)
     for (let k = 0; k < keys.length; k++) {
         let key = keys[k];
 
-        if (depth <= 12)
-            console.log(`depth: ${depth} ${k + 1} of ${keys.length}`);
+        //if (depth <= 1)
+        //    console.log(`depth: ${depth} ${k + 1} of ${keys.length}`);
 
         // create a new map without the key and the corresponding door
         let new_map = [];
@@ -120,6 +120,8 @@ function find_fewest_steps(map, start_loc, depth)
 }
 
 function solve(input, part) {
+    if (part === 2)
+        return 0;
     let map = [];
     input.forEach(line => {
         map.push(line.split(''));
@@ -140,7 +142,8 @@ outer:
     return fewest_steps;
 }
 
-
+// abc 742
+// abcdef 1526
 const expected = part => part === 1 ? 0 : 0;
 
 module.exports = {solve,expected};
