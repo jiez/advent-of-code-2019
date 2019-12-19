@@ -173,42 +173,63 @@ outer:
     return output;
 }
 
-const WIDTH = 50;
-const HEIGHT = 50;
-
-function show_map(map)
-{
-    console.log("Map");
-    for (let j = 0; j < HEIGHT; j++) {
-        for (let i = 0; i < WIDTH; i++)
-            process.stdout.write(map[i][j] === 1 ? "#" : ".");
-        process.stdout.write("\n");
-    }
+function is_beam(input, i, j) {
+    let program = input[0].split(',').map(x => Number(x));
+    program["pc"] = 0;
+    program["relative_base"] = 0;
+    let output = run(program, [i, j]);
+    return output[0] === 1 ? true : false;
 }
 
-function solve(input, part) {
+function solve_part_1(input) {
     let map = [];
     let count = 0;
+    const WIDTH = 50;
+    const HEIGHT = 50;
+
     for(let i = 0; i < WIDTH; i++) {
         map.push([]);
         for (let j = 0; j < HEIGHT; j++) {
-            let program = input[0].split(',').map(x => Number(x));
-            program["pc"] = 0;
-            program["relative_base"] = 0;
-            let output = run(program, [i, j]);
-            //console.log(i, j, output);
-            map[i].push(output[0]);
-            if (output[0] === 1)
+            if (is_beam(input, i, j))
                 count++;
         }
     }
 
-    //show_map(map);
-
-    if (part === 1)
-        return count;
+    return count;
 }
 
-const expected = part => part === 1 ? 158 : 0;
+function solve_part_2(input) {
+    const SHIP_SIZE = 100;
+    let x, y; // lower left corner of the spaceship
+
+    x = 0;
+    y = SHIP_SIZE - 1;
+    
+    do {
+        while (!is_beam(input, x, y))
+            x++;
+
+        if (is_beam(input, x + SHIP_SIZE - 1, y - (SHIP_SIZE - 1)) // uppper right
+            && is_beam(input, x, y - (SHIP_SIZE - 1)) // upper left
+            && is_beam(input, x + SHIP_SIZE - 1, y)) { // lower right
+            break;
+        }
+
+        y++;
+    } while (true);
+
+    //console.log(x, y);
+
+    return x * 10000 + y - (SHIP_SIZE - 1);
+}
+
+function solve(input, part) {
+    if (part === 1)
+        return solve_part_1(input);
+    else
+        return solve_part_2(input);
+}
+
+const expected = part => part === 1 ? 158 : 6191165;
 
 module.exports = {solve,expected};
