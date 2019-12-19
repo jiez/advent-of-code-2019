@@ -1,5 +1,9 @@
 const util = require('util');
 
+function is_entrance(str) {
+    return str === "@";
+}
+
 function is_wall(str) {
     return str === "#";
 }
@@ -24,122 +28,115 @@ function is_key(str) {
         return true;
 }
 
-/* Return an array of immediately accessible keys, for example
+function loc2hash(loc) {
+    return (loc.x + loc.y * 100);
+}
+
+function hash2loc(hash) {
+    return {x: hash % 100, y: Math.floor(hash / 100)};
+}
+
+/* Return an array of immediately accessible entrance, keys and doors, for example
 
      [{name: "A", steps: 10, loc: {x: 20, y: 30}}, ...]
 
-   "immediately" means the key can be accessed without passing another key  */
+   "immediately" means they can be accessed without passing other objects */
 
-function find_all_accessible_keys(map, start_loc) {
+function find_children(map, start_loc) {
     let flood_map = [];
     for (let i = 0; i < map.length; i++)
         flood_map[i] = [];
 
-    let s = 0; // steps
-    let edge = new Set();
-    edge.add(start_loc.x + start_loc.y * 100);
+    let d = 0; // distance
+    let children = [];
 
-    let keys = [];
+    let edge = new Set();
+    edge.add(loc2hash(start_loc));
 
     while (edge.size > 0) {
         let new_edge = new Set();
         edge.forEach(function (dummy, value, set) {
-            let loc = {x: value % 100, y: Math.floor(value / 100)};
+            let loc = hash2loc(value);
             let i = loc.x;
             let j = loc.y;
-            flood_map[i][j] = s;
+            flood_map[i][j] = d;
+            //console.log("");
+            //console.log("take " + map[i][j] + ` (${i},${j}) from edge`);
 
-            if (is_key(map[i][j]))
-                keys.push({name: map[i][j], steps: s, loc: {x: i, y: j}});
-            else {
-                let next_locations = [
-                    {x: i, y: j - 1},
-                    {x: i + 1, y: j},
-                    {x: i, y: j + 1},
-                    {x: i - 1, y: j} ];
+            let next_locations = [
+                {x: i, y: j - 1},
+                {x: i + 1, y: j},
+                {x: i, y: j + 1},
+                {x: i - 1, y: j} ];
 
-                for (let next of next_locations) {
-                    /* no need to check out-of-boundary */
+            for (let next of next_locations) {
+                /* no need to check out-of-boundary */
 
-                    let next_i = next.x;
-                    let next_j = next.y;
+                let next_i = next.x;
+                let next_j = next.y;
 
-                    if (flood_map[next_i][next_j] !== undefined)
-                        continue;
 
-                    if (is_open(map[next_i][next_j]) || is_key(map[next_i][next_j]))
-                        new_edge.add(next_i + next_j * 100);
+                if (flood_map[next_i][next_j] !== undefined) {
+                    //console.log(`  explored: next i: ${next_i}, next j: ${next_j}`);
+                    continue;
+                }
+
+                if (is_open(map[next_i][next_j])) {
+                    //console.log("  " + map[next_i][next_j] + " added to edge");
+                    new_edge.add(loc2hash({x: next_i, y: next_j}));
+                } else if (is_entrance(map[next_i][next_j])
+                           || is_key(map[next_i][next_j])
+                           || is_door(map[next_i][next_j])) {
+                    //console.log("add " + map[next_i][next_j] + " to children");
+                    children.push({name: map[next_i][next_j], distance: d + 1, loc: {x: next_i, y: next_j}});
                 }
             }
         });
-        s++;
+        d++;
         edge = new_edge;
     }
 
-    return keys;
-}
-
-function find_fewest_steps(map, start_loc, depth)
-{
-    //console.log("finding fewest steps from" + util.inspect(start_loc, {depth: 3, colors: false}));
-    let keys = find_all_accessible_keys(map, start_loc);
-    //console.log("    accessible keys:" + util.inspect(keys, {depth: 3, colors: false}));
-
-    if (keys.length === 0) {
-        //console.log("all keys have been found!");
-        return 0;
-    }
-
-    let fewest_steps;
-
-    for (let k = 0; k < keys.length; k++) {
-        let key = keys[k];
-
-        //if (depth <= 1)
-        //    console.log(`depth: ${depth} ${k + 1} of ${keys.length}`);
-
-        // create a new map without the key and the corresponding door
-        let new_map = [];
-        for (i = 0; i < map.length; i++) {
-            new_map.push([]);
-            for (j = 0; j < map[i].length; j++) {
-                if (map[i][j] === key.name
-                    || map[i][j] === key.name.toUpperCase())
-                    new_map[i].push(".");
-                else
-                    new_map[i].push(map[i][j]);
-            }
-        }
-
-        let steps = key.steps + find_fewest_steps(new_map, key.loc, depth + 1);
-        if (fewest_steps === undefined || steps < fewest_steps)
-            fewest_steps = steps;
-    }
-
-    return fewest_steps;
+    //console.log("Children");
+    //console.log(util.inspect(children, {depth: 4, colors: false}));
+    return children;
 }
 
 function solve(input, part) {
     if (part === 2)
         return 0;
+
     let map = [];
     input.forEach(line => {
         map.push(line.split(''));
     });
 
-    let loc;
-outer:
-    for (i = 0; i < map.length; i++)
-        for (j = 0; j < map.length; j++)
-            if (map[i][j] === "@") {
-                // console.log(`@ is at (${i},${j})`);
-                loc = {x: i, y: j};
-            }
+    //console.log("Map");
+    //console.log(map);
 
-    let depth = 0;
-    let fewest_steps = find_fewest_steps(map, loc, depth);
-    console.log(`The fewest steps: ${fewest_steps}`);
-    return fewest_steps;
+    let graph = new Map();
+    for (i = 0; i < map.length; i++)
+        for (j = 0; j < map[i].length; j++) {
+            if (is_entrance(map[i][j]) || is_key(map[i][j]) || is_door(map[i][j])) {
+                graph.set(map[i][j], {loc: {x: i, y: j}});
+            }
+        }
+
+    //console.log("Graph");
+    //console.log(util.inspect(graph, {depth: 4, colors: false}));
+    //console.log("");
+
+    /* discover graph */
+    graph.forEach((value, key, dummy) => {
+        //console.log(`${key} => ${util.inspect(value, {depth: 4, colors: false})}`);
+        value.children = find_children(map, value.loc);
+        //console.log(`${key} => ${util.inspect(value, {depth: 4, colors: false})}`);
+    });
+
+    //console.log("");
+    //console.log("Graph");
+    //console.log(util.inspect(graph, {depth: 4, colors: false}));
+
+    return 0;
 }
 
 // abc 742
