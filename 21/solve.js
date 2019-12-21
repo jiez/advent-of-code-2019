@@ -174,18 +174,21 @@ outer:
 }
 
 function solve(input, part) {
-    if (part === 2)
-        return 0;
-
     let program = input[0].split(',').map(x => Number(x));
     program["pc"] = 0;
     program["relative_base"] = 0;
+    let line;
+
+    line = [];
     while (true) {
         let output = run(program, []);
-        if (output.length > 0)
-            console.log(String.fromCharCode(output[0]));
-        else
+        if (output.length === 0)
             break;
+        else if (output[0] === 10) {
+            console.log(line.join(""));
+            line.length = 0;
+        } else if (output[0] <= 255)
+            line.push(String.fromCharCode(output[0]));
     };
 
     /* we need to jump holes like this
@@ -194,42 +197,75 @@ function solve(input, part) {
 .................
 @................
 #####..#.########
+   ^   ^
+NOT B AND D
 
 .................
 .................
 @................
 #####...#########
+    ^
+NOT A
 
 .................
 .................
 @................
 #####.#..########
+  ^   ^
+NOT C AND D AND H
+            ~~~~~ only for part 2
 
-    NOT A OR (NOT B AND D) OR (NOT C AND D)
+Additional case for part 2
+.................
+.................
+@................
+#####.#.##..#.###
+    ^   ^   ^
+
+
+    NOT A OR (NOT B AND D) OR (NOT C AND D AND H)
+                                           ~~~~~ only for part 2
 
     */
 
-    script = [
-        // NOT A
-        "NOT A J",
-        // OR (NOT B AND D)
-        "NOT B T",
-        "AND D T",
-        "OR T J",
-        // OR (NOT C AND D)
-        "NOT C T",
-        "AND D T",
-        "OR T J",
-        "WALK"
-    ];
+    if (part === 1)
+        script = [
+            // NOT A
+            "NOT A J",
+            // OR (NOT B AND D)
+            "NOT B T",
+            "AND D T",
+            "OR T J",
+            // OR (NOT C AND D)
+            "NOT C T",
+            "AND D T",
+            "OR T J",
+            "WALK"
+        ];
+    else
+        script = [
+            // NOT A
+            "NOT A J",
+            // OR (NOT B AND D)
+            "NOT B T",
+            "AND D T",
+            "OR T J",
+            // OR (NOT C AND D AND H)
+            "NOT C T",
+            "AND D T",
+            "AND H T",
+            "OR T J",
+            "RUN"
+        ];
 
     for (i = 0; i < script.length; i++) {
-        output = run(program, script[i].split('').map(s => s.charCodeAt(0)).concat([10]));
+        console.log(script[i]);
+        let output = run(program, script[i].split('').map(s => s.charCodeAt(0)).concat([10]));
         if (output.length > 0)
             console.log(String.fromCharCode(output[0]));
     }
 
-    let line = [];
+    line = [];
     while (true) {
         let output = run(program, []);
         if (output.length === 0)
@@ -246,6 +282,6 @@ function solve(input, part) {
     };
 }
 
-const expected = part => part === 1 ? 19355364 : 0;
+const expected = part => part === 1 ? 19355364 : 1142530574;
 
 module.exports = {solve,expected};
