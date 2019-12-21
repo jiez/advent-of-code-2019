@@ -1,0 +1,10 @@
+#mynetwork {
+  width: 1200px;
+  height: 640px;
+  border: 1px solid lightgray;
+}
+
+p {
+  max-width: 1200px;
+}
+

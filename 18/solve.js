@@ -36,19 +36,19 @@ function hash2loc(hash) {
     return {x: hash % 100, y: Math.floor(hash / 100)};
 }
 
-/* Return an array of immediately accessible entrance, keys and doors, for example
+/* Return a map of immediately accessible entrance, keys and doors, for example
 
-     [{name: "A", steps: 10, loc: {x: 20, y: 30}}, ...]
+     {"A" => steps, ...}
 
-   "immediately" means they can be accessed without passing other objects */
+   "immediately" means they can be accessed without passing other nodes */
 
-function find_children(map, start_loc) {
+function find_neighbors(map, start_loc) {
     let flood_map = [];
     for (let i = 0; i < map.length; i++)
         flood_map[i] = [];
 
     let d = 0; // distance
-    let children = [];
+    let neighbors = new Map();
 
     let edge = new Set();
     edge.add(loc2hash(start_loc));
@@ -61,7 +61,7 @@ function find_children(map, start_loc) {
             let j = loc.y;
             flood_map[i][j] = d;
             //console.log("");
-            //console.log("take " + map[i][j] + ` (${i},${j}) from edge`);
+            //console.log(`take (${i},${j}) from edge`);
 
             let next_locations = [
                 {x: i, y: j - 1},
@@ -70,25 +70,24 @@ function find_children(map, start_loc) {
                 {x: i - 1, y: j} ];
 
             for (let next of next_locations) {
-                /* no need to check out-of-boundary */
+                // no need to check out-of-boundary
 
                 let next_i = next.x;
                 let next_j = next.y;
 
-
                 if (flood_map[next_i][next_j] !== undefined) {
-                    //console.log(`  explored: next i: ${next_i}, next j: ${next_j}`);
+                    //console.log(`  (${next_i},${next_j}) has been explored`);
                     continue;
                 }
 
-                if (is_open(map[next_i][next_j])) {
-                    //console.log("  " + map[next_i][next_j] + " added to edge");
+                if (is_entrance(map[next_i][next_j])
+                    || is_key(map[next_i][next_j])
+                    || is_door(map[next_i][next_j])) {
+                    //console.log(`  add (${next_i},${next_j}) to neighbors`);
+                    neighbors.set(map[next_i][next_j], d + 1);
+                } else if (is_open(map[next_i][next_j])) {
+                    //console.log(`  add (${next_i},${next_j}) to edge`);
                     new_edge.add(loc2hash({x: next_i, y: next_j}));
-                } else if (is_entrance(map[next_i][next_j])
-                           || is_key(map[next_i][next_j])
-                           || is_door(map[next_i][next_j])) {
-                    //console.log("add " + map[next_i][next_j] + " to children");
-                    children.push({name: map[next_i][next_j], distance: d + 1, loc: {x: next_i, y: next_j}});
                 }
             }
         });
@@ -96,9 +95,43 @@ function find_children(map, start_loc) {
         edge = new_edge;
     }
 
-    //console.log("Children");
-    //console.log(util.inspect(children, {depth: 4, colors: false}));
-    return children;
+    //console.log("Neighbors");
+    //console.log(util.inspect(neighbors, {depth: 4, colors: false}));
+    return neighbors;
+}
+
+function generate_vis_code(graph) {
+    let nodes = [];
+    let edges = [];
+
+    for (let node of graph.keys())
+        nodes.push(node);
+
+    for (let i = 0; i < nodes.length; i++)
+        for (let j = i + 1; j < nodes.length; j++)
+            if (graph.get(nodes[i]).neighbors.has(nodes[j]))
+                edges.push({from: i, to: j});
+
+    console.log("// create an array with nodes");
+    console.log("var nodes = new vis.DataSet([");
+    for (i = 0; i < nodes.length; i++) {
+        let color;
+        if (is_entrance(nodes[i]))
+            color = "black";
+        else if (is_key(nodes[i]))
+            color = "blue";
+        else
+            color = "red";
+
+        console.log(`  { id: ${i + 1}, label: "${nodes[i]}", shape: "circle", color: "${color}" },`);
+    }
+    console.log("]);");
+
+    console.log("// create an array with edges");
+    console.log("var edges = new vis.DataSet([");
+    for (i = 0; i < edges.length; i++)
+        console.log(`  { from: ${edges[i].from + 1}, to: ${edges[i].to + 1} },`);
+    console.log("]);");
 }
 
 function solve(input, part) {
@@ -114,27 +147,29 @@ function solve(input, part) {
     //console.log(map);
 
     let graph = new Map();
-    for (i = 0; i < map.length; i++)
-        for (j = 0; j < map[i].length; j++) {
+    for (let i = 0; i < map.length; i++)
+        for (let j = 0; j < map[i].length; j++) {
             if (is_entrance(map[i][j]) || is_key(map[i][j]) || is_door(map[i][j])) {
                 graph.set(map[i][j], {loc: {x: i, y: j}});
             }
         }
 
-    //console.log("Graph");
+    //console.log("Nodes");
     //console.log(util.inspect(graph, {depth: 4, colors: false}));
     //console.log("");
 
-    /* discover graph */
-    graph.forEach((value, key, dummy) => {
-        //console.log(`${key} => ${util.inspect(value, {depth: 4, colors: false})}`);
-        value.children = find_children(map, value.loc);
-        //console.log(`${key} => ${util.inspect(value, {depth: 4, colors: false})}`);
+    // discover graph
+    graph.forEach((value, node_name, dummy) => {
+        //console.log(`${node_name} => ${util.inspect(value, {depth: 4, colors: false})}`);
+        value.neighbors= find_neighbors(map, value.loc);
+        //console.log(`${node_name} => ${util.inspect(value, {depth: 4, colors: false})}`);
     });
 
-    //console.log("");
-    //console.log("Graph");
-    //console.log(util.inspect(graph, {depth: 4, colors: false}));
+    console.log("Graph");
+    console.log(util.inspect(graph, {depth: 4, colors: false}));
+    console.log("");
+
+    generate_vis_code(graph);
 
     return 0;
 }
