@@ -28,6 +28,10 @@ function is_key(str) {
         return true;
 }
 
+function key_of_door(str) {
+    return String.fromCharCode(str.charCodeAt(0) + 97 - 65);
+}
+
 function loc2hash(loc) {
     return (loc.x + loc.y * 100);
 }
@@ -134,6 +138,91 @@ function generate_vis_code(graph) {
     console.log("]);");
 }
 
+// find all nodes that can be reached from start with keys in owned_keys
+// calculate the shortest path from start to each of these nodes and
+// return them as a map.
+function find_reachable_nodes(graph, start, owned_keys) {
+    let unvisited = new Set();
+    graph.forEach((value, node_name, g) => {
+        unvisited.add(node_name);
+    });
+
+    let reachable_nodes = new Map();
+    reachable_nodes.set(start, 0);
+
+    let current = start;
+    while (unvisited.size > 0) {
+        let current_steps = reachable_nodes.get(current);
+
+        graph.get(current).neighbors.forEach((value, neighbor, neighbors) => {
+            // if it's a door but we don't have the key, we cannot pass
+            // through it
+            if (is_door(neighbor) && !owned_keys.has(key_of_door(neighbor)))
+                return;
+
+            if (unvisited.has(neighbor)) {
+                let steps = current_steps + value;
+                if (reachable_nodes.get(neighbor) === undefined
+                    || reachable_nodes.get(neighbor) > steps)
+                    reachable_nodes.set(neighbor, steps);
+            }
+        });
+
+        unvisited.delete(current);
+
+        let smallest_steps;
+        unvisited.forEach((dummy, node_name, s) => {
+            if (reachable_nodes.get(node_name) !== undefined)
+                if (smallest_steps === undefined
+                    || smallest_steps > reachable_nodes.get(node_name)) {
+                    smallest_steps = reachable_nodes.get(node_name);
+                    current = node_name;
+                }
+        });
+
+        // all unvisited nodes are not reachable
+        if (smallest_steps === undefined) {
+            // console.log(`${start} cannot reach any of ${unvisited}`);
+            break;
+        }
+    }
+
+    return reachable_nodes;
+}
+
+function find_fewest_steps(graph, start, owned_keys, num_of_all_keys, depth) {
+    // if this is the last key, we are done!
+    if (owned_keys.size === num_of_all_keys)
+        return 0;
+
+    owned_keys.add(start);
+    //console.log(`Add ${start} to owned keys`);
+    //console.log(owned_keys);
+
+    // find the shortest path for all nodes which can be reached from start
+    let reachable_nodes = find_reachable_nodes(graph, start, owned_keys);
+    //console.log(`${start} can reach`);
+    //console.log(reachable_nodes);
+
+    let fewest_steps;
+    let via;
+    for (let node_name of reachable_nodes.keys())
+        if (is_key(node_name) && !owned_keys.has(node_name)) {
+            let steps = find_fewest_steps(graph, node_name, owned_keys, num_of_all_keys, depth + 1);
+            if (steps === undefined)
+                continue;
+            steps += reachable_nodes.get(node_name);
+            if (fewest_steps === undefined || steps < fewest_steps) {
+                fewest_steps = steps;
+                via = node_name;
+            }
+        }
+
+    owned_keys.delete(start);
+    //console.log(`Fewest steps is ${fewest_steps} via ${via}`);
+    return fewest_steps;
+}
+
 function solve(input, part) {
     if (part === 2)
         return 0;
@@ -169,9 +258,19 @@ function solve(input, part) {
     console.log(util.inspect(graph, {depth: 4, colors: false}));
     console.log("");
 
-    generate_vis_code(graph);
+    //generate_vis_code(graph);
 
-    return 0;
+    let num_of_all_keys = 0;
+    graph.forEach((value, node_name, dummy) => {
+        if (is_key(node_name))
+            num_of_all_keys++;
+    });
+
+    let depth = 0;
+    let owned_keys = new Set();
+    let fewest_steps = find_fewest_steps(graph, "@", owned_keys, num_of_all_keys, depth);
+    console.log(`The fewest steps: ${fewest_steps}`);
+    return fewest_steps;
 }
 
 // abc 742
