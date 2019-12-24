@@ -251,13 +251,38 @@ function find_reachable_keys(graph, start, owned_keys) {
     return reachable_keys;
 }
 
-function find_fewest_steps_2(graph, start, num_of_all_keys) {
+function estimate_remaining_steps(graph, all_edges, owned_keys, num_of_all_keys) {
+    // very rough estimation
+    //return (num_of_all_keys - owned_keys.size - 1) * 4;
+
+    // more accurate estimation
+    let edges = [];
+
+    all_edges.forEach((value, edge, dummy) => {
+        if (!owned_keys.has(edge.from) && !owned_keys.has(edge.to))
+            edges.push(edge.steps);
+    });
+
+    edges.sort((a, b) => {
+        return a - b;
+    });
+
+    let num_of_remaining_keys = num_of_all_keys - owned_keys.size;
+    let estimation = 0;
+    for (i = 0; i < num_of_remaining_keys - 1; i++)
+        estimation += edges[i];
+
+    return estimation;
+}
+
+function find_fewest_steps_2(graph, start, all_keys, all_edges) {
     let path = [];
     let depth = 0;
     let total_steps = 0;
     let current_node = start;
     let owned_keys = new Set();
     let fewest_steps;
+    let num_of_all_keys = all_keys.size;
 
     let keys = find_reachable_keys(graph, current_node, owned_keys);
     //console.log(`Reachable keys from ${current_node}: ` + util.inspect(keys, {depth: 4, colors: false}));
@@ -278,7 +303,7 @@ function find_fewest_steps_2(graph, start, num_of_all_keys) {
             current_index = path[depth].current_index;
             current_key = path[depth].reachable_keys[current_index];
             steps = current_key.steps;
-            if (fewest_steps !== undefined && total_steps + steps > fewest_steps) {
+            if (fewest_steps !== undefined && total_steps + steps + estimate_remaining_steps(graph, all_edges, owned_keys, num_of_all_keys) >= fewest_steps) {
                 //console.log(`Depth ${depth}, ${current_index} would be more than the current fewest steps ${fewest_steps}`);
                 path[depth].current_index++;
                 continue;
@@ -344,24 +369,35 @@ function solve(input, part) {
         //console.log(`${node_name} => ${util.inspect(value, {depth: 4, colors: false})}`);
     });
 
-    console.log("Graph");
-    console.log(util.inspect(graph, {depth: 4, colors: false}));
-    console.log("");
+    //console.log("Graph");
+    //console.log(util.inspect(graph, {depth: 4, colors: false}));
+    //console.log("");
 
     //generate_vis_code(graph);
 
-    let num_of_all_keys = 0;
+    let all_keys = new Set(); 
     graph.forEach((value, node_name, dummy) => {
         if (is_key(node_name))
-            num_of_all_keys++;
+            all_keys.add(node_name);
     });
+
+    // all_edges records fewest steps between each pair of keys
+    let all_edges = new Set();
+    for (let key of all_keys) {
+        // find all reachable nodes assume we have all keys
+        let reachable_nodes = find_reachable_nodes(graph, key, all_keys);
+
+        for (let node_name of reachable_nodes.keys())
+            if (is_key(node_name) && key < node_name)
+                all_edges.add({from: key, to: node_name, steps: reachable_nodes.get(node_name)});
+    }
 
     /*
     let depth = 0;
     let owned_keys = new Set();
     let fewest_steps = find_fewest_steps(graph, "@", owned_keys, num_of_all_keys, depth);
     */
-    let fewest_steps = find_fewest_steps_2(graph, "@", num_of_all_keys);
+    let fewest_steps = find_fewest_steps_2(graph, "@", all_keys, all_edges);
     console.log(`The fewest steps: ${fewest_steps}`);
     return fewest_steps;
 }
