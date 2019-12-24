@@ -114,7 +114,7 @@ function generate_vis_code(graph) {
     for (let i = 0; i < nodes.length; i++)
         for (let j = i + 1; j < nodes.length; j++)
             if (graph.get(nodes[i]).neighbors.has(nodes[j]))
-                edges.push({from: i, to: j});
+                edges.push({from: i, to: j, steps: graph.get(nodes[i]).neighbors.get(nodes[j])});
 
     console.log("// create an array with nodes");
     console.log("var nodes = new vis.DataSet([");
@@ -123,7 +123,7 @@ function generate_vis_code(graph) {
         if (is_entrance(nodes[i]))
             color = "black";
         else if (is_key(nodes[i]))
-            color = "blue";
+            color = "green";
         else
             color = "red";
 
@@ -134,7 +134,7 @@ function generate_vis_code(graph) {
     console.log("// create an array with edges");
     console.log("var edges = new vis.DataSet([");
     for (i = 0; i < edges.length; i++)
-        console.log(`  { from: ${edges[i].from + 1}, to: ${edges[i].to + 1} },`);
+        console.log(`  { from: ${edges[i].from + 1}, to: ${edges[i].to + 1}, label: "${edges[i].steps}" },`);
     console.log("]);");
 }
 
