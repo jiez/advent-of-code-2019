@@ -239,6 +239,15 @@ function find_reachable_keys(graph, start, owned_keys) {
         if (is_key(node_name) && !owned_keys.has(node_name))
             reachable_keys.push({name: node_name, steps: reachable_nodes.get(node_name)});
 
+    reachable_keys.sort(function (a, b) {
+        if (a.steps < b.steps)
+            return -1;
+        if (a.steps > b.steps)
+            return 1;
+
+        return 0;
+    });
+
     return reachable_keys;
 }
 
