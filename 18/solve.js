@@ -204,6 +204,14 @@ function find_fewest_steps(graph, start, owned_keys, num_of_all_keys, depth) {
     //console.log(`${start} can reach`);
     //console.log(reachable_nodes);
 
+    /*
+    let num_of_reachable_keys = 0;
+    for (let node_name of reachable_nodes.keys())
+        if (is_key(node_name) && !owned_keys.has(node_name))
+            num_of_reachable_keys++;
+    console.log(`${start} depth: ${depth} reachable keys: ${num_of_reachable_keys}`);
+    */
+
     let fewest_steps;
     let via;
     for (let node_name of reachable_nodes.keys())
@@ -220,6 +228,79 @@ function find_fewest_steps(graph, start, owned_keys, num_of_all_keys, depth) {
 
     owned_keys.delete(start);
     //console.log(`Fewest steps is ${fewest_steps} via ${via}`);
+    return fewest_steps;
+}
+
+function find_reachable_keys(graph, start, owned_keys) {
+    let reachable_nodes = find_reachable_nodes(graph, start, owned_keys);
+    let reachable_keys = [];
+
+    for (let node_name of reachable_nodes.keys())
+        if (is_key(node_name) && !owned_keys.has(node_name))
+            reachable_keys.push({name: node_name, steps: reachable_nodes.get(node_name)});
+
+    return reachable_keys;
+}
+
+function find_fewest_steps_2(graph, start, num_of_all_keys) {
+    let path = [];
+    let depth = 0;
+    let total_steps = 0;
+    let current_node = start;
+    let owned_keys = new Set();
+    let fewest_steps;
+
+    let keys = find_reachable_keys(graph, current_node, owned_keys);
+    //console.log(`Reachable keys from ${current_node}: ` + util.inspect(keys, {depth: 4, colors: false}));
+    path[depth] = {node_name: current_node, current_index: 0, reachable_keys: keys};
+
+    let current_index;
+    let current_key;
+    let steps;
+
+    while (true) {
+        //console.log(`path depth: ${depth}`);
+        //console.log(util.inspect(path, {depth: 4, colors: false}));
+
+        if (depth < 7)
+            console.log(`depth: ${depth} ` + path[depth].current_index + " of " + path[depth].reachable_keys.length);
+
+        if (path[depth].current_index < path[depth].reachable_keys.length) {
+            current_index = path[depth].current_index;
+            current_key = path[depth].reachable_keys[current_index];
+            steps = current_key.steps;
+            if (fewest_steps !== undefined && total_steps + steps > fewest_steps) {
+                //console.log(`Depth ${depth}, ${current_index} would be more than the current fewest steps ${fewest_steps}`);
+                path[depth].current_index++;
+                continue;
+            }
+
+            current_node = current_key.name;
+            total_steps += steps;
+            depth++;
+            owned_keys.add(current_node);
+            keys = find_reachable_keys(graph, current_node, owned_keys);
+            path[depth] = {node_name: current_node, current_index: 0, reachable_keys: keys};
+            continue;
+        } else if (depth === num_of_all_keys) {
+            if (fewest_steps === undefined || total_steps < fewest_steps) {
+                fewest_steps = total_steps;
+                console.log(`fewest steps: ${fewest_steps}`);
+            }
+        } else if (depth === 0) {
+            break;
+        }
+
+        depth--;
+        current_index = path[depth].current_index;
+        current_key = path[depth].reachable_keys[current_index];
+        steps = current_key.steps;
+        current_node = current_key.name;
+        total_steps -= steps;
+        owned_keys.delete(current_key.name);
+        path[depth].current_index++;
+    }
+
     return fewest_steps;
 }
 
@@ -266,9 +347,12 @@ function solve(input, part) {
             num_of_all_keys++;
     });
 
+    /*
     let depth = 0;
     let owned_keys = new Set();
     let fewest_steps = find_fewest_steps(graph, "@", owned_keys, num_of_all_keys, depth);
+    */
+    let fewest_steps = find_fewest_steps_2(graph, "@", num_of_all_keys);
     console.log(`The fewest steps: ${fewest_steps}`);
     return fewest_steps;
 }

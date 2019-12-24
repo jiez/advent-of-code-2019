@@ -1,3 +1,5 @@
+/* original input */
+/*
 // create an array with nodes
 var nodes = new vis.DataSet([
   { id: 1, label: "f", shape: "circle", color: "blue" },
@@ -175,6 +177,85 @@ var edges = new vis.DataSet([
   { from: 48, to: 49 },
   { from: 49, to: 51 },
   { from: 50, to: 52 },
+]);
+*/
+/*
+#################
+#i.G..c...e..H.p#
+########.########
+#j.A..b...f..D.o#
+########@########
+#k.E..a...g..B.n#
+########.########
+#l.F..d...h..C.m#
+#################
+*/
+// create an array with nodes
+var nodes = new vis.DataSet([
+  { id: 1, label: "i", shape: "circle", color: "blue" },
+  { id: 2, label: "G", shape: "circle", color: "red" },
+  { id: 3, label: "c", shape: "circle", color: "blue" },
+  { id: 4, label: "e", shape: "circle", color: "blue" },
+  { id: 5, label: "H", shape: "circle", color: "red" },
+  { id: 6, label: "p", shape: "circle", color: "blue" },
+  { id: 7, label: "j", shape: "circle", color: "blue" },
+  { id: 8, label: "A", shape: "circle", color: "red" },
+  { id: 9, label: "b", shape: "circle", color: "blue" },
+  { id: 10, label: "f", shape: "circle", color: "blue" },
+  { id: 11, label: "D", shape: "circle", color: "red" },
+  { id: 12, label: "o", shape: "circle", color: "blue" },
+  { id: 13, label: "@", shape: "circle", color: "black" },
+  { id: 14, label: "k", shape: "circle", color: "blue" },
+  { id: 15, label: "E", shape: "circle", color: "red" },
+  { id: 16, label: "a", shape: "circle", color: "blue" },
+  { id: 17, label: "g", shape: "circle", color: "blue" },
+  { id: 18, label: "B", shape: "circle", color: "red" },
+  { id: 19, label: "n", shape: "circle", color: "blue" },
+  { id: 20, label: "l", shape: "circle", color: "blue" },
+  { id: 21, label: "F", shape: "circle", color: "red" },
+  { id: 22, label: "d", shape: "circle", color: "blue" },
+  { id: 23, label: "h", shape: "circle", color: "blue" },
+  { id: 24, label: "C", shape: "circle", color: "red" },
+  { id: 25, label: "m", shape: "circle", color: "blue" },
+]);
+// create an array with edges
+var edges = new vis.DataSet([
+  { from: 1, to: 2 },
+  { from: 2, to: 3 },
+  { from: 3, to: 4 },
+  { from: 3, to: 9 },
+  { from: 3, to: 10 },
+  { from: 3, to: 13 },
+  { from: 4, to: 5 },
+  { from: 4, to: 9 },
+  { from: 4, to: 10 },
+  { from: 4, to: 13 },
+  { from: 5, to: 6 },
+  { from: 7, to: 8 },
+  { from: 8, to: 9 },
+  { from: 9, to: 10 },
+  { from: 9, to: 13 },
+  { from: 10, to: 11 },
+  { from: 10, to: 13 },
+  { from: 11, to: 12 },
+  { from: 13, to: 16 },
+  { from: 13, to: 17 },
+  { from: 13, to: 22 },
+  { from: 13, to: 23 },
+  { from: 14, to: 15 },
+  { from: 15, to: 16 },
+  { from: 16, to: 17 },
+  { from: 16, to: 22 },
+  { from: 16, to: 23 },
+  { from: 17, to: 18 },
+  { from: 17, to: 22 },
+  { from: 17, to: 23 },
+  { from: 18, to: 19 },
+  { from: 20, to: 21 },
+  { from: 21, to: 22 },
+  { from: 22, to: 23 },
+  { from: 23, to: 24 },
+  { from: 24, to: 25 },
 ]);
 
 // create a network
