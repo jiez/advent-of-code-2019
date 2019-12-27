@@ -186,12 +186,25 @@ outer:
 
 function run_commands(program, commands, output) {
     let stat;
+    let output_buf = [];
+
+    if (commands.length === 0) {
+        stat = run(program, [], output_buf);
+
+        while (stat === STOP_OUTPUT) {
+            stat = run(program, [], output_buf);
+        }
+
+        let output_lines = output_buf.map(c => String.fromCharCode(c)).join('');
+        //console.log(output_lines);
+        output.push(output_lines);
+    }
 
     for (command of commands) {
         //console.log(`send command ${command}`);
 
         let input_buf = command.split('').map(s => s.charCodeAt(0)).concat([10]);
-        let output_buf = [];
+        output_buf = [];
 
         stat = run(program, input_buf, output_buf);
 
@@ -207,9 +220,9 @@ function run_commands(program, commands, output) {
     return stat;   
 }
 
-function parse_output_lines(output_lines) {
+function parse_output(output) {
     let parse_regex = /== (?<name>.*) ==\n(?<description>.*)\n\n(Doors here lead:\n(?<doors>(- .*\n)*))?\n(Items here:\n(?<items>(- .*\n)*))?/;
-    let parsed = output_lines.match(parse_regex);
+    let parsed = output.match(parse_regex);
     //console.log(parsed);
 
     if (parsed !== null && parsed.groups !== null) {
@@ -289,95 +302,88 @@ function solve(input, part) {
     // if the door exists but has not been explored, it is null 
     let graph = new Map();
 
-    // record the places we have visited
-    //let visited_places = new Set();
+    let commands = [];
+    let output = [];
 
-    let input_buf = [];
-    let output_buf = [];
-    let output_lines;
     let backing = false;
+
     while (true) {
-        let stat = run(program, input_buf, output_buf);
+        output = [];
+        //console.log(commands);
+        run_commands(program, commands, output);
+        commands = [];
+        //console.log(output);
+        let place = parse_output(output[0]);
+        //console.log(place);
 
-        if (stat === STOP_OUTPUT) {
-        } else if (stat === STOP_INPUT) {
-            output_lines = output_buf.map(c => String.fromCharCode(c)).join('');
-            //console.log(output_lines);
-            output_buf.length = 0;
+        // if this is the first time we visit this place
+        if (!graph.has(place.name)) {
+            // add it to the graph
+            //console.log(`This is the first time visiting ${place.name}, adding it to graph`);
+            //console.log("before " + util.inspect(graph, {depth: 4, colors: false}));
+            graph.set(place.name, {description: place.description,
+                doors: place.doors, leads: new Map(), items: place.items});
 
-            let place = parse_output_lines(output_lines);
-
-            //console.log(place);
-
-            // if this is the first time we visit this place
-            if (!graph.has(place.name)) {
-                // add it to the graph
-                //console.log(`This is the first time visiting ${place.name}, adding it to graph`);
-                //console.log("before " + util.inspect(graph, {depth: 4, colors: false}));
-                graph.set(place.name, {description: place.description,
-                    doors: place.doors, leads: new Map(), items: place.items});
-
-                if (depth > 0) {
-                    let prev_place = graph.get(path[depth - 1].place_name);
-                    prev_place.leads.set(prev_place.doors[path[depth - 1].current_door], place.name);
-                    graph.get(place.name).leads.set(back_command(command), path[depth - 1].place_name);
-                }
-                //console.log("after " + util.inspect(graph, {depth: 4, colors: false}));
-
-                if (output_lines.includes("ejected back to the checkpoint")) {
-                    // this is a hack
-                    //console.log("ejected back to the checkpoint");
-                    backing = true;
-                    command = "south";
-                    depth--;
-                    depth--;
-                } else {
-                    // add it to the path
-                    //console.log("adding it to path")
-                    //console.log("before " + util.inspect(path, {depth: 4, colors: false}));
-                    path[depth] = {place_name: place.name, current_door: 0};
-                    //console.log("after " + util.inspect(path, {depth: 4, colors: false}));
-
-                    // next command
-                    command = graph.get(path[depth].place_name).doors[path[depth].current_door];
-
-                    depth++;
-                }
-            } else if (backing && path[depth].current_door < graph.get(path[depth].place_name).doors.length - 1) {
-                path[depth].current_door++;
-                backing = false;
-                command = graph.get(path[depth].place_name).doors[path[depth].current_door];
-                depth++;
-                //console.log(`backing and choose the next door ${command}`);
-            } else {
-                // not backing but we have been this place before
-                // or we are backing but we have tried all doors
-                // either case we need back to the place of previous depth
-
-                //console.log(`not backing or no next door to choose`);
-
-                if (depth === 0) {
-                    //console.log("All places have been explored!");
-                    //console.log(util.inspect(graph, {depth: 4, colors: false}));
-                    break;
-                }
-
-                //console.log("backing");
-
-                depth--;
-                //console.log(util.inspect(path, {depth: 4, colors: false}));
-                //console.log(`depth: ${depth}`);
-
-                let previous_cmd = graph.get(path[depth].place_name).doors[path[depth].current_door];
-                command = back_command(previous_cmd);
-                backing = true;
-
-                //console.log(`backing using command ${command}`);
+            if (depth > 0) {
+                let prev_place = graph.get(path[depth - 1].place_name);
+                prev_place.leads.set(prev_place.doors[path[depth - 1].current_door], place.name);
+                graph.get(place.name).leads.set(back_command(command), path[depth - 1].place_name);
             }
+            //console.log("after " + util.inspect(graph, {depth: 4, colors: false}));
 
-            input_buf = command.split('').map(s => s.charCodeAt(0)).concat([10]);
-            //console.log(`send command ${command}`);
-        }
+            if (output[0].includes("ejected back to the checkpoint")) {
+                // this is a hack
+                //console.log("ejected back to the checkpoint");
+                backing = true;
+                command = "south";
+                depth--;
+                depth--;
+            } else {
+                // add it to the path
+                //console.log("adding it to path")
+                //console.log("before " + util.inspect(path, {depth: 4, colors: false}));
+                path[depth] = {place_name: place.name, current_door: 0};
+                //console.log("after " + util.inspect(path, {depth: 4, colors: false}));
+
+                // next command
+                command = graph.get(path[depth].place_name).doors[path[depth].current_door];
+
+                depth++;
+            }
+       } else if (backing && path[depth].current_door < graph.get(path[depth].place_name).doors.length - 1) {
+           path[depth].current_door++;
+           backing = false;
+           command = graph.get(path[depth].place_name).doors[path[depth].current_door];
+           depth++;
+           //console.log(`backing and choose the next door ${command}`);
+       } else {
+           // not backing but we have been this place before
+           // or we are backing but we have tried all doors
+           // either case we need back to the place of previous depth
+
+           //console.log(`not backing or no next door to choose`);
+
+           if (depth === 0) {
+               //console.log("All places have been explored!");
+               //console.log(util.inspect(graph, {depth: 4, colors: false}));
+               break;
+           }
+
+           //console.log("backing");
+
+           depth--;
+           //console.log(util.inspect(path, {depth: 4, colors: false}));
+           //console.log(`depth: ${depth}`);
+
+           let previous_cmd = graph.get(path[depth].place_name).doors[path[depth].current_door];
+           command = back_command(previous_cmd);
+           backing = true;
+
+           //console.log(`backing using command ${command}`);
+       }
+
+       commands.push(command);
+       //console.log(`send command ${command}`);
     }
 
     // create a list of items
@@ -399,9 +405,6 @@ function solve(input, part) {
     // now we have a map and we are at the "Hull Breach" again
     let current_place = path[depth].place_name;
     //console.log(`we are at ${current_place} now`);
-
-    let commands = [];
-    let output = [];
 
     // we first move all items to security checkpoint
     for (item of items) {
