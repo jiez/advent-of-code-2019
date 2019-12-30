@@ -138,7 +138,9 @@ function generate_vis_code(graph) {
     console.log("]);");
 }
 
-// find all nodes that can be reached from start with keys in owned_keys
+// find all nodes that can be reached from start with keys in owned_keys.
+// search should not pass through keys not owned or doors whose keys are
+// not owned yet.
 // calculate the shortest path from start to each of these nodes and
 // return them as a map.
 function find_reachable_nodes(graph, start, owned_keys) {
@@ -153,6 +155,9 @@ function find_reachable_nodes(graph, start, owned_keys) {
     let current = start;
     while (unvisited.size > 0) {
         let current_steps = reachable_nodes.get(current);
+
+        // we should not pass a key which is not owned yet
+        if (!is_key(current) || owned_keys.has(current))
 
         graph.get(current).neighbors.forEach((value, neighbor, neighbors) => {
             // if it's a door but we don't have the key, we cannot pass
