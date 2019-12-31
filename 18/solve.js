@@ -296,7 +296,7 @@ function find_fewest_steps_2(graph, start, all_keys, all_edges) {
         //console.log(`path depth: ${depth}`);
         //console.log(util.inspect(path, {depth: 4, colors: false}));
 
-        if (depth < 7)
+        if (depth < 2)
             console.log(`depth: ${depth} ` + path[depth].current_index + " of " + path[depth].reachable_keys.length);
 
         if (path[depth].current_index < path[depth].reachable_keys.length) {
