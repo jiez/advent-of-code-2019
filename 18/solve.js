@@ -404,6 +404,6 @@ function solve(input, part) {
 
 // abc 742
 // abcdef 1526
-const expected = part => part === 1 ? 0 : 0;
+const expected = part => part === 1 ? 3832 : 0;
 
 module.exports = {solve,expected};
